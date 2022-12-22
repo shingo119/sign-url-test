@@ -17,22 +17,16 @@
         <script src="https://code.jquery.com/jquery-3.6.3.min.js" integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU=" crossorigin="anonymous"></script>
         <script>
             let upload_file;
-            let filename = @json($filename);
-            let pre_signed_url = @json($pre_signed_url)
-            
             $(function() {
-                let droppable = $("#droppable");
-
-                console.log(filename)
-                console.log(pre_signed_url)
+                var droppable = $("#droppable");
 
                 // File API が使用できない場合は諦めます.
                 if(!window.FileReader) {
-                alert("File API がサポートされていません。");
-                return false;
+                    alert("File API がサポートされていません。");
+                    return false;
                 }
 
-                let cancelEvent = function(event) {
+                var cancelEvent = function(event) {
                     event.preventDefault();
                     event.stopPropagation();
                     return false;
@@ -42,18 +36,15 @@
                 droppable.bind("dragover", cancelEvent);
 
                 // ドロップ時のイベントハンドラを設定します.
-                let handleDroppedFile = function(event) {
-                // ファイルは複数ドロップされる可能性がありますが, ここでは 1 つ目のファイルを扱います.
-                let file = event.originalEvent.dataTransfer.files[0];
-                $("#droppable").text("[" + file.name + "]");
-                upload_file = file
-                console.log(upload_file)
-                cancelEvent(event);
-                return false;
+                var handleDroppedFile = function(event) {
+                    // ファイルは複数ドロップされる可能性がありますが, ここでは 1 つ目のファイルを扱います.
+                    var file = event.originalEvent.dataTransfer.files[0];
+                    $("#droppable").text("[" + file.name + "]");
+                    upload_file = file
+                    cancelEvent(event);
+                    return false;
                 }
-
                 droppable.bind("drop", handleDroppedFile);
-                
             });
 
             //////////////////////////////////////////////////////
@@ -67,74 +58,92 @@
                     return false
                 }
 
-                // $.ajax({
-                //     url: "/one-time.php",
-                //     data: {"name":upload_file.name},
-                //     type: 'GET',
-                //     dataType: 'json'
-                // }).done(data => sendFileCore(data, upload_file))
-
-                // return false
                 $.ajax({
-                    url: pre_signed_url,
-                    type: 'PUT',
-                    data: upload_file,
-                    // contentType: file.type,
-                    processData: false
-                }).done(function(d) {
-                    alert('完了')
-                })
+                    url: "{{route('s3.getPresignedUrl')}}",
+                    data: {"filename":upload_file.name},
+                    type: 'GET',
+                    dataType: 'json'
+                }).done(data => sendFileCore(data, upload_file))
+                return false
             })
 
             // Ajaxで取得した署名付きURLを使用してファイルをアップロードする処理
-            // function sendFileCore(data, file) {
-            //     $.ajax({
-            //         url: data.uri,
-            //         type: 'PUT',
-            //         data: file,
-            //         contentType: file.type,
-            //         processData: false
-            //     }).done(function(d) {
-            //         alert('完了')
-            //     })
-            // }
+            function sendFileCore(data, file) {
+                // console.log(data)
+                $.ajax({
+                    url: data.pre_signed_url,
+                    type: 'PUT',
+                    data: file,
+                    contentType: file.type,
+                    processData: false
+                })
+                .done(function(json_data) {
+                    alert("S3保存完了");
+                })
+                .fail(function() {
+                    alert("error")
+                })
+            }
         </script>
+
+        {{-- インプットでファイル選択タイプのスクリプト --}}
         <script>
             $(function(){
-                var file;
                 let upload_file;
-                let filename = @json($filename);
-                let pre_signed_url = @json($pre_signed_url)
 
                 $("#upfile").change(function(){
                     console.log("upload file");
                     if (this.files.length > 0) {
-                        file = this.files[0];
+                        upload_file = this.files[0];
                     }
                 });
 
                 $("#button").click(function(){
-                    console.log(file);
-                    var filetype = file["type"];
-                    // var imgurl = "アップロード先のURL";
+                    var filetype = upload_file["type"];
+
                     $.ajax({
-                        type: "PUT",
-                        url: pre_signed_url,
-                        data: file,
-                        headers:{
-                            "Content-Type":filetype
-                        },
-                        processData: false,
-                        contentType: false
-                    })
-                    .done(function(json_data) {
-                        console.log("success");
-                    })
-                    .fail(function() {
-                        alert("error");
-                    });
+                        url: "{{route('s3.getPresignedUrl')}}",
+                        data: {"filename":upload_file.name},
+                        type: 'GET',
+                        dataType: 'json'
+                    }).done(data => sendFileCore(data, upload_file))
+
+                    // $.ajax({
+                    //     type: "PUT",
+                    //     url: pre_signed_url,
+                    //     data: file,
+                    //     headers:{
+                    //         "Content-Type":filetype
+                    //     },
+                    //     processData: false,
+                    //     contentType: false
+                    // })
+                    // .done(function(json_data) {
+                    //     console.log("success");
+                    // })
+                    // .fail(function() {
+                    //     alert("error");
+                    // });
                 });
             });
+
+            // Ajaxで取得した署名付きURLを使用してファイルをアップロードする処理
+            function sendFileCore(data, file) {
+                console.log(data)
+                $.ajax({
+                    url: data.pre_signed_url,
+                    type: 'PUT',
+                    data: file,
+                    contentType: file.type,
+                    processData: false
+                })
+                .done(function(json_data) {
+                    alert("S3保存完了");
+                })
+                .fail(function() {
+                    alert("error")
+                })
+            }
         </script>
     </body>
 </html>

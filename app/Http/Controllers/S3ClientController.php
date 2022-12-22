@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-// require '/path/to/vendor/autoload.php';
 use App\Http\Requests\GetPresignedUrlRequest;
 use Aws\S3\S3Client;
 use Aws\S3\Transfer;
@@ -19,10 +18,8 @@ class S3ClientController extends Controller
     public function getPresignedUrl(GetPresignedUrlRequest $request)
     {
         $s3Client = new S3Client([
-            // 'profile' => 'default',
             'region' => 'ap-northeast-1',
             'version' => 'latest',
-            // 'endpoint' => config('filesystems.disks.s3.client_url')
         ]);
 
         $filename = $this->makeUniqueFilename(
@@ -39,20 +36,11 @@ class S3ClientController extends Controller
             '+5 minutes'
         );
 
-        return view('welcome',[
-            'filename' => $filename,
-            'pre_signed_url' => (string) $presignedRequest->getUri()
-        ]);
-    }
-
-    public function oneTime($request){
-        $s3 = S3Client::factory(['region' => getenv('AWS_REGION'), 'version' => '2006-03-01']);
-        $command = $s3->getCommand('PutObject');
-        $command['Bucket'] = 'example-test-s3';
-        $command['Key'] = $_GET['name'];
-        $result = $s3->createPresignedRequest($command, '+1 minutes');
-        $data = ['uri' => (string)$result->getUri()];
-        echo json_encode($data);
+        // return view('welcome',[
+        //     'filename' => $filename,
+        //     'pre_signed_url' => (string) $presignedRequest->getUri()
+        // ]);
+        return response()->json(['filename' => $filename, 'pre_signed_url' => (string) $presignedRequest->getUri()]);
     }
 
     /**
